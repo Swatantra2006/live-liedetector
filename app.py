@@ -2,14 +2,21 @@
 from flask import Flask, Response, render_template, jsonify
 import threading, time
 import cv2
+import os
 from detector import analyze_face_from_frame, state
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # Global video capture (0 = default webcam)
-cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    raise RuntimeError("Could not open webcam. Make sure your camera is free and available.")
+# For Vercel deployment, webcam access may not be available
+try:
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Warning: Could not open webcam. Video streaming will be disabled.")
+        cap = None
+except Exception as e:
+    print(f"Warning: Webcam initialization failed: {e}")
+    cap = None
 
 # frame processing thread lock
 lock = threading.Lock()
@@ -19,6 +26,12 @@ def gen_frames():
     Generator that yields MJPEG frames for Flask streaming.
     Also calls analyze_face_from_frame on each frame (or every Nth frame).
     """
+    if not cap:
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n'
+               b'\r\n')
+        return
+
     frame_counter = 0
     while True:
         success, frame = cap.read()
@@ -70,7 +83,8 @@ def status():
 
 def cleanup():
     try:
-        cap.release()
+        if cap:
+            cap.release()
     except:
         pass
 
