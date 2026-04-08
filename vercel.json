@@ -1,0 +1,15 @@
+{
+  "buildCommand": "pip install -r requirements.txt",
+  "functions": {
+    "app.py": {
+      "runtime": "python3.12"
+    }
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.py"
+    }
+  ],
+  "outputDirectory": "static"
+}
